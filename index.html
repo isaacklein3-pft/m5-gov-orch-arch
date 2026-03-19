@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M5 Validator Governance and Protocol Upgrade Orchestration Architecture</title>
+<style>
+  :root {
+    --navy: #0d1b2a;
+    --blue: #1b4f8a;
+    --accent: #2e7dbc;
+    --light-blue: #e8f1f8;
+    --green: #1a6b3c;
+    --light-green: #e8f5ee;
+    --red: #8b1a1a;
+    --light-red: #fdf0f0;
+    --amber: #7a4f00;
+    --light-amber: #fdf6e3;
+    --gray: #4a4a4a;
+    --light-gray: #f5f5f5;
+    --border: #d0d9e3;
+    --white: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', serif;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--navy);
+    background: var(--white);
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 40px 80px;
+  }
+  .cover { border-top: 6px solid var(--accent); border-bottom: 2px solid var(--border); padding: 48px 0 36px; margin-bottom: 48px; text-align: center; }
+  .cover-badge { display: inline-block; background: var(--light-blue); color: var(--blue); border: 1px solid var(--accent); border-radius: 3px; font-family: 'Courier New', monospace; font-size: 11px; font-weight: bold; letter-spacing: 1.5px; padding: 4px 12px; margin-bottom: 24px; text-transform: uppercase; }
+  .cover h1 { font-size: 25px; font-weight: bold; color: var(--navy); line-height: 1.3; margin-bottom: 12px; max-width: 720px; margin-left: auto; margin-right: auto; }
+  .cover-sub { font-size: 14px; color: var(--gray); margin-bottom: 28px; }
+  .cover-meta { display: flex; justify-content: center; gap: 36px; font-size: 12px; color: var(--gray); border-top: 1px solid var(--border); padding-top: 20px; margin-top: 20px; flex-wrap: wrap; }
+  .cover-meta span strong { color: var(--navy); }
+  .toc { background: var(--light-gray); border: 1px solid var(--border); border-radius: 4px; padding: 24px 28px; margin-bottom: 48px; }
+  .toc h2 { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: var(--blue); margin-bottom: 14px; font-family: sans-serif; }
+  .toc ol { list-style: none; counter-reset: toc; }
+  .toc ol li { counter-increment: toc; padding: 4px 0; font-size: 13px; color: var(--gray); display: flex; align-items: baseline; gap: 8px; }
+  .toc ol li::before { content: counter(toc) "."; font-weight: bold; color: var(--accent); min-width: 18px; font-family: sans-serif; }
+  .toc ol li a { color: var(--navy); text-decoration: none; }
+  .toc ol li a:hover { color: var(--accent); text-decoration: underline; }
+  .section { margin-bottom: 56px; }
+  .section-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--accent); }
+  .section-num { background: var(--accent); color: var(--white); font-family: 'Courier New', monospace; font-size: 13px; font-weight: bold; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .section-header h2 { font-size: 18px; color: var(--navy); line-height: 1.25; }
+  .subsection { margin-bottom: 28px; }
+  .subsection h3 { font-size: 14px; font-weight: bold; color: var(--blue); margin-bottom: 10px; font-family: sans-serif; text-transform: uppercase; letter-spacing: 0.5px; border-left: 3px solid var(--accent); padding-left: 10px; }
+  p { margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px; }
+  th { background: var(--navy); color: var(--white); font-family: sans-serif; font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase; padding: 10px 12px; text-align: left; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: var(--light-gray); }
+  tr:last-child td { border-bottom: 2px solid var(--accent); }
+  code { font-family: 'Courier New', monospace; font-size: 12px; background: #eef2f7; border: 1px solid #c8d8e8; border-radius: 3px; padding: 1px 5px; color: var(--navy); }
+  .callout { border-radius: 4px; padding: 14px 18px; margin-bottom: 16px; font-size: 13px; }
+  .callout.info { background: var(--light-blue); border-left: 4px solid var(--accent); color: var(--blue); }
+  .callout.warning { background: var(--light-amber); border-left: 4px solid #e0a800; color: var(--amber); }
+  .callout.critical { background: var(--light-red); border-left: 4px solid var(--red); color: var(--red); }
+  .callout.success { background: var(--light-green); border-left: 4px solid var(--green); color: var(--green); }
+  .callout strong { display: block; margin-bottom: 4px; font-family: sans-serif; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .flow { display: flex; flex-direction: column; gap: 0; margin-bottom: 20px; }
+  .flow-step { display: flex; align-items: stretch; gap: 0; }
+  .flow-connector { width: 40px; display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .flow-connector .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); margin-top: 18px; flex-shrink: 0; }
+  .flow-connector .line { width: 2px; flex-grow: 1; background: var(--border); }
+  .flow-box { flex-grow: 1; border: 1px solid var(--border); border-radius: 4px; padding: 12px 16px; margin: 4px 0; background: var(--white); }
+  .flow-box h4 { font-family: sans-serif; font-size: 12px; font-weight: bold; color: var(--navy); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .flow-box p { font-size: 12px; color: var(--gray); margin: 0; }
+  .matrix { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+  .matrix-cell { border: 1px solid var(--border); border-radius: 4px; padding: 14px 16px; }
+  .matrix-cell h4 { font-family: sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent); margin-bottom: 8px; font-weight: bold; }
+  .matrix-cell ul { list-style: none; font-size: 12.5px; color: var(--gray); }
+  .matrix-cell ul li { padding: 2px 0; padding-left: 14px; position: relative; }
+  .matrix-cell ul li::before { content: "-"; position: absolute; left: 0; color: var(--accent); }
+  .threshold-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .threshold-card { border: 1px solid var(--border); border-top: 4px solid var(--accent); border-radius: 4px; padding: 14px; text-align: center; }
+  .threshold-card.emergency { border-top-color: var(--red); }
+  .threshold-card .t-num { font-family: 'Courier New', monospace; font-size: 22px; font-weight: bold; color: var(--accent); }
+  .threshold-card.emergency .t-num { color: var(--red); }
+  .threshold-card .t-type { font-size: 12px; font-weight: bold; color: var(--navy); margin-top: 4px; font-family: sans-serif; }
+  .threshold-card .t-label { font-size: 11px; color: var(--gray); margin-top: 4px; font-family: sans-serif; line-height: 1.4; }
+  .schema-block { background: #f0f4f8; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 4px; padding: 14px 18px; font-family: 'Courier New', monospace; font-size: 12px; margin-bottom: 16px; line-height: 1.8; }
+  .schema-block .schema-title { font-family: sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--blue); margin-bottom: 8px; font-weight: bold; }
+  .schema-block .field { color: var(--navy); }
+  .schema-block .type { color: #2e6da8; }
+  .schema-block .comment { color: #666; font-style: italic; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+  .appendix-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .appendix-card { border: 1px solid var(--border); border-top: 3px solid var(--accent); border-radius: 4px; padding: 14px; font-size: 12px; }
+  .appendix-card h4 { font-family: sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--blue); margin-bottom: 8px; }
+  .appendix-card p { color: var(--gray); margin: 0; }
+  .footer { margin-top: 60px; border-top: 1px solid var(--border); padding-top: 20px; font-size: 11px; color: #888; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="cover-badge">Post Fiat Superstructure Validator Platform</div>
+  <h1>M5 Validator Governance and Protocol Upgrade Orchestration Architecture</h1>
+  <div class="cover-sub">Decentralized Governance and Protocol Evolution for Live Institutional Validator Infrastructure</div>
+  <div class="cover-meta">
+    <span><strong>Phase:</strong> M5: Live Validator Operations</span>
+    <span><strong>Classification:</strong> Governance Architecture Specification</span>
+    <span><strong>Version:</strong> 1.0, March 2026</span>
+    <span><strong>Alignment:</strong> Superstructure Validator Platform / Post Fiat L1 Mainnet</span>
+  </div>
+</div>
+
+<div class="callout info">
+  <strong>Document Purpose and Scope</strong>
+  This specification defines the complete governance and protocol upgrade orchestration architecture for the Post Fiat Superstructure validator platform. It extends the governance signal propagation model in M5 Cross-Operator Coordination (Section 5) with full lifecycle detail: proposal origination through ratification, heterogeneous operator upgrade coordination, rollback architecture, middleware vote propagation mechanics, and emergency upgrade paths. All governance mechanisms preserve the zero-custody boundary established in M2 and the Maker/Checker/Reviewer institutional control model established in M3. Middleware aggregates and routes governance signals but holds no voting authority and cannot determine outcomes unilaterally.
+</div>
+
+<div class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#s1">Governance Proposal Lifecycle</a>: origination rules, proposal schema, discussion period, amendment procedures, ratification thresholds</li>
+    <li><a href="#s2">Protocol Upgrade Coordination Across Heterogeneous Operator Infrastructure</a>: version discovery, compatibility negotiation, staged sequencing, operator-specific windows</li>
+    <li><a href="#s3">Rollback Architecture</a>: automated triggers, state checkpoint preservation, partial-fleet isolation, verification and consensus continuity</li>
+    <li><a href="#s4">Governance Vote Propagation Through Middleware</a>: vote collection, aggregation, quorum calculation, result certification, audit trail</li>
+    <li><a href="#s5">Emergency Upgrade Paths Preserving Maker/Checker/Reviewer Separation</a>: fast-track criteria, reduced quorum with compensating controls, post-emergency audit, abuse prevention</li>
+  </ol>
+</div>
+
+<!-- SECTION 1 -->
+<div class="section" id="s1">
+  <div class="section-header">
+    <div class="section-num">1</div>
+    <h2>Governance Proposal Lifecycle</h2>
+  </div>
+
+  <p>A governance proposal is a formal request to change network parameters, operator membership, protocol behavior, or governance rules. Every change to the validator network that affects more than one operator or any institutional custody arrangement must go through the proposal lifecycle defined here. Informal agreements between operators do not constitute governance decisions and carry no binding weight.</p>
+
+  <div class="subsection">
+    <h3>1.1 Origination Rules</h3>
+    <p>Proposals originate from two sources: OCP (for protocol-level changes including upgrades, parameter adjustments, and security patches) and institutions (for operator-level changes including additions, removals, and custody policy updates). Operators have no direct proposal origination rights. An operator who believes a change is warranted submits a formal request to OCP through the admin channel; OCP evaluates whether the request meets the criteria to become a formal proposal. This prevents operators from constructing self-serving proposals and routing them directly to institutions.</p>
+    <table>
+      <tr><th>Originator</th><th>Proposal Types Permitted</th><th>Origination Gate</th><th>OCP Role</th></tr>
+      <tr>
+        <td>OCP Governance Service</td>
+        <td>Protocol upgrades, parameter changes within defined bounds, security patch fast-tracks, operator deregistration for cause, governance rule amendments</td>
+        <td>OCP internal review; dual-approval by two OCP engineers before proposal is formalized</td>
+        <td>Constructs and signs the proposal payload; broadcasts to all institutions simultaneously</td>
+      </tr>
+      <tr>
+        <td>Institution</td>
+        <td>Operator addition nomination, operator removal request, custody policy update, governance threshold amendment</td>
+        <td>Institution submits request through institutional gateway; OCP validates format and classifies proposal type before formalizing</td>
+        <td>Formalizes and routes the proposal; does not modify institution-originated content without re-routing to originating institution for re-submission</td>
+      </tr>
+      <tr>
+        <td>Operator (indirect)</td>
+        <td>Any proposal type, via OCP request pathway</td>
+        <td>Operator submits request to OCP admin channel with justification; OCP decides whether to formalize; OCP is not obligated to formalize operator requests</td>
+        <td>OCP acts as gatekeeper; if OCP formalizes the request, the proposal is attributed to OCP, not the operator</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h3>1.2 Proposal Format Schema</h3>
+    <p>Every proposal submitted to the governance pipeline must conform to the following schema. OCP validates schema compliance before broadcasting. A non-conforming proposal is returned to the originator with a validation error and does not enter the governance pipeline.</p>
+    <div class="schema-block">
+      <div class="schema-title">Governance Proposal Payload Schema (JSON, RFC 8785 canonical)</div>
+      <span class="field">proposal_id</span>:         <span class="type">UUID v4</span>          <span class="comment">// OCP-assigned; unique across all proposals</span><br>
+      <span class="field">proposal_type</span>:       <span class="type">enum</span>             <span class="comment">// PROTOCOL_UPGRADE | PARAM_CHANGE | OPERATOR_ADD | OPERATOR_REMOVE | GOVERNANCE_RULE | SECURITY_PATCH</span><br>
+      <span class="field">originator</span>:          <span class="type">string</span>           <span class="comment">// "OCP" or institution identifier (validated against OCP registry)</span><br>
+      <span class="field">title</span>:               <span class="type">string(200)</span>      <span class="comment">// Human-readable title; max 200 chars</span><br>
+      <span class="field">summary</span>:             <span class="type">string(2000)</span>     <span class="comment">// Plain-language summary of change and rationale; max 2000 chars</span><br>
+      <span class="field">technical_payload</span>:   <span class="type">object</span>           <span class="comment">// Type-specific fields: binary manifest hash, param delta, operator identity, etc.</span><br>
+      <span class="field">quorum_type</span>:         <span class="type">enum</span>             <span class="comment">// SIMPLE_MAJORITY | SUPERMAJORITY | UNANIMOUS; derived from proposal_type</span><br>
+      <span class="field">discussion_period_h</span>: <span class="type">integer</span>          <span class="comment">// Hours; 72 standard; 24 expedited; 2 emergency (see Section 5)</span><br>
+      <span class="field">voting_period_h</span>:     <span class="type">integer</span>          <span class="comment">// Hours; 48 standard; 24 expedited; 4 emergency</span><br>
+      <span class="field">implementation_ref</span>: <span class="type">string|null</span>      <span class="comment">// For PROTOCOL_UPGRADE: binary manifest hash; null for non-binary proposals</span><br>
+      <span class="field">rollback_ref</span>:       <span class="type">string|null</span>      <span class="comment">// For PROTOCOL_UPGRADE: rollback binary manifest hash; null otherwise</span><br>
+      <span class="field">created_at</span>:         <span class="type">ISO8601 UTC</span>      <span class="comment">// OCP NTP-sourced timestamp</span><br>
+      <span class="field">content_hash</span>:       <span class="type">SHA-256</span>          <span class="comment">// Hash of canonical JSON payload; used by institutions to verify integrity</span><br>
+      <span class="field">ocp_signature</span>:      <span class="type">Ed25519</span>          <span class="comment">// OCP governance signing key signature over canonical JSON</span>
+    </div>
+    <p>The <code>rollback_ref</code> field is mandatory for all <code>PROTOCOL_UPGRADE</code> proposals. An upgrade proposal without a designated rollback binary hash does not pass OCP validation. This ensures institutions authorize both the upgrade and its rollback path in a single ceremony, which is what prevents synchronized signing requirements during a rollback event.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>1.3 Discussion Period Mechanics</h3>
+    <p>The discussion period is the window between proposal broadcast and voting window open. Its purpose is to give institutions time to evaluate the proposal internally, request clarifications from OCP, and prepare their M/C/R process before the voting window begins. Operators cannot participate in or observe the discussion period; it is an institution-only process mediated through the institutional gateway.</p>
+    <table>
+      <tr><th>Discussion Period Type</th><th>Duration</th><th>Trigger Condition</th><th>Institution Actions Permitted</th><th>OCP Actions Permitted</th></tr>
+      <tr>
+        <td>Standard</td>
+        <td>72 hours</td>
+        <td>All routine proposals: parameter changes, operator additions, governance rule amendments</td>
+        <td>Submit clarification requests to OCP; receive OCP clarification responses; initiate internal M/C/R evaluation; submit formal objection records</td>
+        <td>Respond to clarification requests; publish clarification responses to all institutions simultaneously; accept formal objection records; cannot modify proposal content after broadcast</td>
+      </tr>
+      <tr>
+        <td>Expedited</td>
+        <td>24 hours</td>
+        <td>Protocol upgrades with a defined security motivation (non-critical); operator removal for cause where evidence is pre-documented</td>
+        <td>Same as standard; compressed timeline</td>
+        <td>Same as standard; must flag expedited classification reason in the broadcast payload</td>
+      </tr>
+      <tr>
+        <td>Emergency</td>
+        <td>2 hours</td>
+        <td>Actively exploited vulnerability; network stability threat; criteria defined in Section 5</td>
+        <td>Submit Reviewer unavailability notification if applicable; escalate to backup Reviewer; begin M/C/R immediately</td>
+        <td>Publish threat justification document simultaneously with proposal; cannot invoke emergency classification without documented threat</td>
+      </tr>
+    </table>
+    <div class="callout warning">
+      <strong>Proposal Immutability After Broadcast</strong>
+      A proposal cannot be modified after OCP broadcasts it. If a material error is discovered during the discussion period, OCP must withdraw the proposal (issuing a <code>PROPOSAL_WITHDRAWN</code> notice to all institutions) and submit a corrected proposal as a new governance item. Withdrawal resets the full lifecycle including discussion and voting periods. Amendment by substitution is the only permitted amendment mechanism. In-place editing of a live proposal is not permitted because institutions may have already begun their internal M/C/R evaluation against the original content hash.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h3>1.4 Ratification Thresholds and Quorum Definitions</h3>
+    <div class="threshold-grid">
+      <div class="threshold-card">
+        <div class="t-num">50%+1</div>
+        <div class="t-type">Simple Majority</div>
+        <div class="t-label">Parameter changes within pre-approved bounds; routine policy updates; scheduling adjustments</div>
+      </div>
+      <div class="threshold-card">
+        <div class="t-num">66%</div>
+        <div class="t-type">Supermajority</div>
+        <div class="t-label">Protocol upgrades; new operator admission; governance threshold amendments; expedited proposals</div>
+      </div>
+      <div class="threshold-card">
+        <div class="t-num">100%</div>
+        <div class="t-type">Unanimous</div>
+        <div class="t-label">Operator removal; changes to zero-custody boundary definitions; Maker/Checker/Reviewer rule modifications</div>
+      </div>
+      <div class="threshold-card emergency">
+        <div class="t-num">50%</div>
+        <div class="t-type">Emergency Reduced</div>
+        <div class="t-label">Emergency security patches only; compensating controls apply (Section 5); post-emergency ratification required within 72h</div>
+      </div>
+      <div class="threshold-card">
+        <div class="t-num">Active</div>
+        <div class="t-type">Quorum Denominator</div>
+        <div class="t-label">Count of institutions with at least one validator in healthy or degraded tier at vote open; offline institutions excluded per M5 Cross-Operator Coordination Section 5.1</div>
+      </div>
+      <div class="threshold-card">
+        <div class="t-num">Per-Inst</div>
+        <div class="t-type">One Vote Per Institution</div>
+        <div class="t-label">An institution with multiple active validators holds one vote. Validator count does not affect voting weight. OCP enforces this at the vote aggregation layer.</div>
+      </div>
+    </div>
+    <p>Quorum is met when the threshold fraction of active institutions submits a valid signed vote envelope before the voting deadline. Abstentions count toward quorum participation but not toward the approval threshold. A proposal that reaches quorum participation but fails the approval threshold is recorded as <code>PROPOSAL_REJECTED</code>. A proposal that fails to reach quorum participation is recorded as <code>PROPOSAL_LAPSED</code> and may be resubmitted after a 14-day cooling period.</p>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- SECTION 2 -->
+<div class="section" id="s2">
+  <div class="section-header">
+    <div class="section-num">2</div>
+    <h2>Protocol Upgrade Coordination Across Heterogeneous Operator Infrastructure</h2>
+  </div>
+
+  <p>Operator infrastructure is heterogeneous by design: operators choose their own hardware, cloud regions, operating systems, and deployment tooling. Protocol upgrades must propagate across this diverse fleet without requiring operators to standardize their infrastructure or synchronize their maintenance windows with each other. OCP is the only coordination point; operators do not coordinate upgrade timing directly.</p>
+
+  <div class="subsection">
+    <h3>2.1 Version Discovery</h3>
+    <p>OCP maintains the authoritative version registry: a record of every binary version currently running across all operator nodes, derived from the secure boot attestation data emitted through the telemetry channel. Operators do not report versions directly; OCP infers running version from binary hash comparison against the known manifest registry. This means version discovery is passive for operators: they do not need to implement a version reporting API, and OCP does not need to query operators for their current version.</p>
+    <table>
+      <tr><th>Discovery Event</th><th>OCP Action</th><th>Data Source</th><th>Operator Visibility</th></tr>
+      <tr>
+        <td>Node startup or restart</td>
+        <td>Secure boot attestation result contains binary hash; OCP maps hash to version identifier via manifest registry</td>
+        <td>Telemetry channel binary integrity check result</td>
+        <td>Operator sees their own version via admin channel attestation query; cannot see other operators' versions</td>
+      </tr>
+      <tr>
+        <td>Runtime integrity poll (every 300 seconds)</td>
+        <td>Binary hash comparison result included in telemetry payload; OCP updates version registry entry for the node</td>
+        <td>Telemetry channel runtime integrity metric (<code>NODE_INTEGRITY</code>)</td>
+        <td>Same as above</td>
+      </tr>
+      <tr>
+        <td>Post-upgrade attestation</td>
+        <td>OCP generates fleet version attestation report after each upgrade wave; confirms percentage of fleet on current authorized version</td>
+        <td>Aggregated from all node telemetry; individual operator data not included in report</td>
+        <td>All institutions receive fleet attestation report; operators receive own-node confirmation only</td>
+      </tr>
+      <tr>
+        <td>Version drift detection</td>
+        <td>If a node's binary hash does not match any version in the authorized manifest registry, OCP generates a P2 alert and sets <code>NODE_INTEGRITY</code> to fail for that node</td>
+        <td>Manifest registry mismatch</td>
+        <td>Affected operator receives P2 alert via admin channel; no other operator is notified</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h3>2.2 Compatibility Negotiation</h3>
+    <p>Compatibility is OCP-determined, not operator-negotiated. When a new version is ratified through the governance process, OCP publishes a compatibility matrix in the broadcast payload. The matrix specifies which existing versions can process signing ceremonies from nodes on the new version and vice versa. This allows mixed-version fleets to remain operational during staged rollouts.</p>
+    <table>
+      <tr><th>Compatibility Scenario</th><th>Matrix Entry</th><th>OCP Behavior</th><th>Ceremony Routing Impact</th></tr>
+      <tr>
+        <td>New version fully backward-compatible with previous version</td>
+        <td><code>v_new COMPAT v_prev: YES</code></td>
+        <td>Mixed-version fleet operates normally; no ceremony routing restrictions</td>
+        <td>None: ceremonies route to any available operator regardless of version</td>
+      </tr>
+      <tr>
+        <td>New version introduces ceremony envelope format change</td>
+        <td><code>v_new COMPAT v_prev: PARTIAL (envelope_v2)</code></td>
+        <td>OCP routes envelope_v2 ceremonies only to operators on v_new; envelope_v1 ceremonies route to both versions</td>
+        <td>Operators on v_prev receive only envelope_v1 ceremonies during transition; not penalized in CRS for this routing restriction</td>
+      </tr>
+      <tr>
+        <td>New version breaks backward compatibility (rare; requires unanimous quorum)</td>
+        <td><code>v_new COMPAT v_prev: NO</code></td>
+        <td>Hard cutover date is specified in the upgrade proposal; operators remaining on v_prev after cutover have signing ceremony acceptance suspended</td>
+        <td>Full fleet must upgrade before cutover date; OCP monitors patch currency and escalates operators approaching cutover without upgrading</td>
+      </tr>
+      <tr>
+        <td>Version below minimum support floor</td>
+        <td><code>v_old COMPAT any: DEPRECATED</code></td>
+        <td>OCP sends mandatory upgrade notification to operator; 48-hour remediation window; signing suspended after window</td>
+        <td>No ceremony routing to deprecated-version nodes after remediation window expires</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h3>2.3 Staged Rollout Sequencing and Operator-Specific Upgrade Windows</h3>
+    <p>Staged rollout uses a three-wave model as specified in M5 Cross-Operator Coordination Section 3.1, with the following additions governing heterogeneous operator infrastructure specifically.</p>
+    <p>Wave assignment is not strictly deterministic: OCP uses a scoring function that incorporates operator health score, patch currency signal, infrastructure diversity (to avoid correlated failure across operators on similar hardware configurations), and time zone distribution (to avoid concentrating early waves in a single region, which would leave other regions without recently-upgraded nodes during the observation window). An operator can request a wave deferral through the admin channel with a documented maintenance conflict. OCP may grant up to a 48-hour deferral for Wave 2 or Wave 3; Wave 1 deferrals require OCP engineering approval because Wave 1 failures trigger rollback decisions.</p>
+    <p>Operator-specific upgrade windows are declared by the operator through the admin channel: a 4-hour window within which the operator is prepared to receive and apply the binary. OCP schedules the binary push within that window. If an operator fails to declare a window within 24 hours of receiving a wave assignment notification, OCP assigns a default window during the operator's lowest-ceremony-volume period as inferred from their telemetry history. Operators running across multiple time zones may declare multiple acceptable windows; OCP selects the earliest window that falls within the observation schedule.</p>
+    <div class="callout info">
+      <strong>No Synchronized Signing Window Requirement</strong>
+      The staged rollout design ensures that at least 50% of the fleet remains on the previous authorized version throughout any upgrade wave. Signing ceremonies route to operators on either version during the transition period (subject to compatibility matrix constraints). No institution is asked to schedule, hold, or defer a signing ceremony because of an upgrade in progress on another operator's node. The institution signed for both the upgrade binary and the rollback binary in Wave 0 before any operator received the new binary. The signing window requirement is front-loaded into governance ratification, not distributed across operational upgrade events.
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- SECTION 3 -->
+<div class="section" id="s3">
+  <div class="section-header">
+    <div class="section-num">3</div>
+    <h2>Rollback Architecture</h2>
+  </div>
+
+  <p>Rollback architecture addresses the failure case where an upgrade introduces a defect that is not caught by pre-upgrade testing and manifests on live infrastructure. The goal is to restore the fleet to a known-good state as quickly as possible while preserving consensus continuity and ensuring no validator produces conflicting outputs during the transition.</p>
+
+  <div class="subsection">
+    <h3>3.1 Automated Rollback Triggers</h3>
+    <table>
+      <tr><th>Trigger</th><th>Detection Mechanism</th><th>Sustain Window</th><th>Rollback Scope</th><th>OCP Action Within</th></tr>
+      <tr>
+        <td>Wave health score degradation</td>
+        <td>Two or more operators in the current wave enter degraded or critical tier within 60 minutes of applying the upgrade</td>
+        <td>60 minutes post-upgrade application per node; no debounce (correlated multi-operator degradation is high confidence)</td>
+        <td>Fleet-wide: all operators receive rollback signal regardless of current wave</td>
+        <td>30 seconds from trigger confirmation: broadcast rollback signal via <code>CHAN_OCP_BROADCAST</code></td>
+      </tr>
+      <tr>
+        <td>P1 incident upgrade attribution</td>
+        <td>Any P1 security or integrity incident on a Wave 1 or Wave 2 node where OCP forensic analysis attributes the incident to the new binary version</td>
+        <td>Zero tolerance: P1 attribution triggers immediate rollback signal without sustain window</td>
+        <td>Fleet-wide</td>
+        <td>Immediate; P1 incident response and rollback signal issued in parallel</td>
+      </tr>
+      <tr>
+        <td>Consensus divergence</td>
+        <td><code>NET_FORK_STATUS</code> signal detects chain tip disagreement between upgraded and non-upgraded nodes</td>
+        <td>Zero tolerance: any fork divergence is immediate rollback trigger regardless of wave</td>
+        <td>Fleet-wide; all nodes suspend new signing ceremonies pending divergence resolution</td>
+        <td>Immediate: ceremony suspension broadcast; rollback signal within 60 seconds</td>
+      </tr>
+      <tr>
+        <td>Coordinated operator self-rollback</td>
+        <td>Three or more operators initiate self-rollback through admin channel within 60 minutes</td>
+        <td>60-minute rolling window; consistent with M5 Cross-Operator Coordination Section 3.3</td>
+        <td>Fleet-wide</td>
+        <td>60 seconds from third self-rollback receipt</td>
+      </tr>
+      <tr>
+        <td>Ceremony success rate collapse</td>
+        <td>Fleet-wide ceremony success rate drops below 90% within 30 minutes of any upgrade wave completing</td>
+        <td>30 minutes post-wave completion; continuous monitoring at 60-second intervals</td>
+        <td>Fleet-wide</td>
+        <td>30 seconds from threshold breach confirmation</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h3>3.2 State Checkpoint Preservation</h3>
+    <p>Before any upgrade binary is applied to a node, OCP instructs the node to create a state checkpoint. The checkpoint captures the configuration state, nonce log depth, ceremony queue state, and binary hash at the moment immediately before upgrade application. This checkpoint is uploaded to the OCP forensic store over a one-way transfer (the store cannot write back to the node) and registered with a content hash in the OCP audit log.</p>
+    <p>State checkpoint creation is a prerequisite gate for upgrade application: OCP does not push the new binary to a node until it receives confirmation that the checkpoint upload completed successfully. An operator cannot skip the checkpoint step. If checkpoint creation fails (for example, due to insufficient disk space or a telemetry outage), the node is excluded from the current wave and placed in the next wave after the operator resolves the underlying issue.</p>
+    <p>On rollback, the state checkpoint is used to verify post-rollback state rather than to restore state directly. The rollback binary is applied fresh; after application, OCP verifies that the node's configuration hash and nonce log depth match the pre-upgrade checkpoint values. A discrepancy between post-rollback state and checkpoint state generates a P2 alert and blocks the node from re-entering ceremony operations until the discrepancy is resolved. This matters because a node that processed ceremonies on the new binary before rollback may have advanced its nonce log; OCP accounts for this by accepting nonce log depths at or above the checkpoint value, not requiring an exact match.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>3.3 Partial-Fleet Rollback Isolation</h3>
+    <p>A partial-fleet rollback isolates operators in the current wave from operators in completed waves or earlier waves that are not yet affected. This prevents an upgrade defect that manifests only on certain hardware configurations from triggering a rollback of operators on configurations where the binary is running correctly.</p>
+    <p>Partial-fleet rollback applies only when the trigger is wave-specific and does not involve consensus divergence or a P1 incident. Consensus divergence and P1 incidents always trigger fleet-wide rollback because the risks of a split fleet outweigh the benefit of preserving some operators on the new version. For wave-specific health degradation triggers, OCP may isolate the rollback to the affected wave if: the non-affected waves have been stable for at least 4 hours, the compatibility matrix permits mixed-version operation, and no ceremony routing disruption results from leaving some operators on the new version while rolling others back.</p>
+    <p>An operator whose wave is rolled back is not automatically moved to a later wave for the next upgrade attempt. OCP conducts a post-rollback analysis to identify whether the failure was hardware-specific, configuration-specific, or binary-level. Hardware and configuration failures result in the operator receiving targeted remediation guidance before being re-queued. Binary-level failures result in fleet-wide rollback regardless of isolation status.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>3.4 Rollback Verification Procedures and Consensus Continuity</h3>
+    <p>Rollback verification confirms that every node in the rollback scope has successfully returned to the authorized rollback binary and is processing ceremonies correctly. Verification runs on a 5-minute post-rollback observation window per node.</p>
+    <table>
+      <tr><th>Verification Step</th><th>Mechanism</th><th>Pass Criteria</th><th>Failure Consequence</th></tr>
+      <tr>
+        <td>Binary hash confirmation</td>
+        <td>Secure boot attestation result in telemetry payload; OCP maps hash to rollback manifest entry</td>
+        <td>Binary hash matches rollback manifest hash registered during Wave 0 upgrade authorization</td>
+        <td>Node remains in ceremony suspension; operator receives P2 alert; manual investigation required</td>
+      </tr>
+      <tr>
+        <td>Nonce log continuity check</td>
+        <td>OCP compares post-rollback nonce log depth against pre-upgrade checkpoint; accepts depth at or above checkpoint value</td>
+        <td>Nonce log depth is at or above checkpoint value; no nonce log truncation has occurred</td>
+        <td>P2 alert; node blocked from ceremonies until nonce integrity is confirmed by operator forensic review</td>
+      </tr>
+      <tr>
+        <td>Ceremony success rate normalization</td>
+        <td>OCP monitors ceremony success rate for 5 consecutive minutes post-rollback</td>
+        <td>Ceremony success rate returns to pre-upgrade baseline (rolling 1-hour average from before Wave 0)</td>
+        <td>Extended observation; if rate does not normalize within 30 minutes, node enters degraded tier</td>
+      </tr>
+      <tr>
+        <td>Consensus state confirmation</td>
+        <td>OCP verifies <code>NET_FORK_STATUS</code> returns to 100% tip agreement across all rolled-back nodes</td>
+        <td>All nodes in rollback scope agree on chain tip; no divergence persists</td>
+        <td>Network-level coordination escalation; all signing ceremonies suspended network-wide until tip agreement restored</td>
+      </tr>
+    </table>
+    <p>Consensus continuity during rollback is maintained by suspending new signing ceremony initiation for nodes in transition. Nodes on stable versions (not in the rollback scope, or already confirmed rolled back) continue processing ceremonies. OCP routes ceremonies away from transitioning nodes using the health score tier mechanism: a node applying the rollback binary enters the equivalent of a planned maintenance state, and its routing weight drops to 0 until verification completes. This is the same mechanism used for planned maintenance handoffs and does not require any institution ceremony action.</p>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- SECTION 4 -->
+<div class="section" id="s4">
+  <div class="section-header">
+    <div class="section-num">4</div>
+    <h2>Governance Vote Propagation Through Middleware</h2>
+  </div>
+
+  <p>Middleware (OCP) handles vote collection, aggregation, and result certification. This concentrated role creates an obvious risk: a middleware that can manipulate votes can determine governance outcomes. The architecture addresses this risk by making OCP's role in vote processing verifiable and auditable by every institution independently. OCP cannot manufacture a valid signed vote envelope because it does not hold institutional signing keys. OCP can only count what institutions actually sign.</p>
+
+  <div class="subsection">
+    <h3>4.1 Vote Collection</h3>
+    <p>Institutions submit votes as signed vote envelopes through the institutional gateway. Each vote envelope is cryptographically bound to a specific proposal and cannot be reused across proposals.</p>
+    <div class="schema-block">
+      <div class="schema-title">Vote Envelope Schema</div>
+      <span class="field">vote_id</span>:             <span class="type">UUID v4</span>          <span class="comment">// OCP-assigned on receipt; returned to institution as receipt</span><br>
+      <span class="field">proposal_id</span>:         <span class="type">UUID v4</span>          <span class="comment">// Must match a live proposal in VOTING state</span><br>
+      <span class="field">institution_id</span>:      <span class="type">string</span>           <span class="comment">// Validated against OCP institution registry</span><br>
+      <span class="field">vote_direction</span>:      <span class="type">enum</span>             <span class="comment">// YES | NO | ABSTAIN</span><br>
+      <span class="field">proposal_hash</span>:       <span class="type">SHA-256</span>          <span class="comment">// Institution's independent hash of the proposal payload; must match OCP-broadcast hash</span><br>
+      <span class="field">voted_at</span>:           <span class="type">ISO8601 UTC</span>      <span class="comment">// OCP NTP-sourced; institution timestamp also included for audit comparison</span><br>
+      <span class="field">nonce</span>:              <span class="type">UUID v4</span>          <span class="comment">// Single-use nonce; checked against 30-day retention log</span><br>
+      <span class="field">institution_sig</span>:    <span class="type">Ed25519</span>          <span class="comment">// Signed inside institution custody environment; Reviewer-authorized per M/C/R</span>
+    </div>
+    <p>The <code>proposal_hash</code> field requires the institution to independently compute the SHA-256 hash of the proposal payload they received and include it in the vote envelope. OCP verifies this hash matches the hash of the proposal it broadcast. A mismatch means the institution received a tampered proposal and voted on different content than the rest of the cohort. OCP rejects the vote, notifies the institution, and generates a P1 security alert for investigation of the tamper event. This mechanism ensures that vote fraud by proposal substitution is detectable.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>4.2 Vote Aggregation</h3>
+    <p>OCP aggregates votes as they are received. The running tally is not disclosed to any party before the voting deadline. After the deadline, OCP publishes the final tally. The aggregation process itself is verifiable: every institution can confirm that its own vote envelope was counted by requesting a vote receipt from OCP after the deadline. The receipt confirms that the institution's vote was received and included in the tally without revealing how any other institution voted.</p>
+    <table>
+      <tr><th>Aggregation Step</th><th>OCP Action</th><th>Verification Available To</th><th>What Is Not Disclosed</th></tr>
+      <tr>
+        <td>Vote receipt on submission</td>
+        <td>Returns <code>vote_id</code> and confirmation timestamp to submitting institution; logs receipt to immutable audit store</td>
+        <td>Submitting institution only</td>
+        <td>Running tally; other institutions' participation status</td>
+      </tr>
+      <tr>
+        <td>Duplicate vote rejection</td>
+        <td>If an institution submits a second vote envelope for the same proposal before the deadline, the second submission is rejected with <code>ERR_VOTE_DUPLICATE</code>; first vote stands</td>
+        <td>Submitting institution (rejection notice)</td>
+        <td>Not disclosed to other institutions</td>
+      </tr>
+      <tr>
+        <td>Deadline closure</td>
+        <td>Voting window closes; no further vote envelopes accepted; tally finalized</td>
+        <td>All institutions (deadline time was published in proposal)</td>
+        <td>N/A</td>
+      </tr>
+      <tr>
+        <td>Final tally computation</td>
+        <td>Counts valid signed envelopes by vote_direction; computes quorum participation rate and approval rate against active institution denominator</td>
+        <td>Result broadcast to all institutions simultaneously</td>
+        <td>Individual institution vote directions (participation is public; direction is private)</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h3>4.3 Quorum Calculation</h3>
+    <p>Quorum calculation uses the active institution denominator defined in Section 1.4: institutions with at least one validator in healthy or degraded tier at voting window open. OCP records the denominator value at the moment the voting window opens and uses that value throughout the vote. The denominator does not change if an institution's validator enters a worse tier during the voting period; the institution retains its vote eligibility for the duration of the window.</p>
+    <p>Two quorum conditions must both be satisfied for a proposal to pass. First, the participation condition: the fraction of active institutions that submitted any valid vote (YES, NO, or ABSTAIN) must meet or exceed 50%. This prevents a proposal from passing with a technically valid supermajority that represents only a small subset of the cohort because most institutions did not participate. Second, the approval condition: the fraction of yes votes among all participating institutions must meet the proposal's quorum type threshold.</p>
+    <p>If the participation condition is not met, the proposal lapses regardless of how the votes that were cast broke down. A proposal where 60% of institutions vote YES but only 40% participated does not pass: the cohort is treated as having insufficiently engaged, not as having approved.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>4.4 Result Certification</h3>
+    <p>OCP generates a signed result certificate after the voting deadline. The certificate is delivered to all institutions via the institutional gateway and to all operators via the broadcast channel. It constitutes the authoritative record of the governance outcome and is the document that institutions reference when authorizing implementation ceremonies.</p>
+    <div class="schema-block">
+      <div class="schema-title">Result Certificate Schema</div>
+      <span class="field">result_id</span>:           <span class="type">UUID v4</span>          <span class="comment">// Unique identifier for this result record</span><br>
+      <span class="field">proposal_id</span>:         <span class="type">UUID v4</span>          <span class="comment">// Links to original proposal</span><br>
+      <span class="field">outcome</span>:             <span class="type">enum</span>             <span class="comment">// PASSED | REJECTED | LAPSED | WITHDRAWN</span><br>
+      <span class="field">yes_count</span>:           <span class="type">integer</span>          <span class="comment">// Count of valid YES envelopes</span><br>
+      <span class="field">no_count</span>:            <span class="type">integer</span>          <span class="comment">// Count of valid NO envelopes</span><br>
+      <span class="field">abstain_count</span>:       <span class="type">integer</span>          <span class="comment">// Count of valid ABSTAIN envelopes</span><br>
+      <span class="field">non_participating</span>:   <span class="type">integer</span>          <span class="comment">// Active institutions that did not submit a valid vote</span><br>
+      <span class="field">active_denom</span>:        <span class="type">integer</span>          <span class="comment">// Active institution count at voting window open</span><br>
+      <span class="field">quorum_type_applied</span>: <span class="type">enum</span>             <span class="comment">// Threshold type used for this proposal</span><br>
+      <span class="field">participating_institutions</span>: <span class="type">list[institution_id]</span> <span class="comment">// IDs of institutions that submitted valid votes (not their vote direction)</span><br>
+      <span class="field">certified_at</span>:        <span class="type">ISO8601 UTC</span>      <span class="comment">// OCP NTP-sourced timestamp</span><br>
+      <span class="field">ocp_signature</span>:       <span class="type">Ed25519</span>          <span class="comment">// OCP governance signing key</span>
+    </div>
+    <p>The result certificate includes the list of participating institution identifiers but not their vote directions. Any institution can verify that its own identifier appears in <code>participating_institutions</code> to confirm its vote was counted. No institution can determine how another institution voted from the certificate alone. The OCP audit store retains the full vote envelope set (including vote directions) under access control: the individual vote direction data is accessible only to OCP engineers under the dual-approval workflow and to institutions requesting their own vote record.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>4.5 Audit Trail Generation and Middleware Authority Constraints</h3>
+    <p>Every step of the vote lifecycle generates an immutable audit log entry: proposal broadcast, clarification requests, amendment withdrawals, vote receipts, deadline closure, tally computation, and result certificate issuance. Log entries are written to the OCP immutable audit store with SHA-256 hash chaining per M5 Security Hardening Section 4.1. The complete audit trail for any proposal is available to all institutions on request through the institutional gateway.</p>
+    <div class="callout critical">
+      <strong>What Middleware Cannot Do</strong>
+      OCP cannot manufacture a valid vote envelope: institutional signing keys never enter the Middleware Layer. OCP cannot change a vote direction after receipt: vote envelopes are write-once in the audit store. OCP cannot exclude a valid vote from the tally without the exclusion appearing in the audit log with a reason code visible to the affected institution. OCP cannot modify the quorum denominator after the voting window opens: the denominator is locked at window-open and recorded in the audit store. OCP cannot declare a result that does not follow from the signed vote envelopes: result certification is deterministic given the vote envelope set and the proposal's quorum type. Any institution can independently recompute the result from the audit trail and compare it against the OCP-certified result. A discrepancy would constitute evidence of middleware manipulation and is the basis for a governance dispute.
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- SECTION 5 -->
+<div class="section" id="s5">
+  <div class="section-header">
+    <div class="section-num">5</div>
+    <h2>Emergency Upgrade Paths Preserving Maker/Checker/Reviewer Separation</h2>
+  </div>
+
+  <p>Emergency upgrades address situations where a security vulnerability is being actively exploited or where a network stability threat requires faster action than the standard governance timeline permits. The design challenge is real: time pressure is the natural enemy of the M/C/R process. The solution is not to compress M/C/R but to compress everything else: the discussion period, the voting window, and the quorum threshold. The internal institutional process that leads to a signing decision stays intact.</p>
+
+  <div class="subsection">
+    <h3>5.1 Emergency Fast-Track Criteria</h3>
+    <p>The emergency fast-track is not available on demand. OCP must classify a proposal as emergency and document the classification publicly before any compressed timeline applies. Classification criteria are narrow to prevent misuse.</p>
+    <table>
+      <tr><th>Criterion</th><th>Required Evidence</th><th>Documentation Requirement</th><th>Challengeable By</th></tr>
+      <tr>
+        <td>Active exploitation of a known vulnerability in the current binary</td>
+        <td>OCP forensic evidence of active exploit: P1 incident record with binary attribution, or credible external threat intelligence from a trusted security research source</td>
+        <td>Threat justification document published simultaneously with emergency proposal broadcast; cannot be classified first and documented later</td>
+        <td>Any institution within 30 minutes of broadcast; challenge does not pause the emergency timeline but is recorded in the governance audit log</td>
+      </tr>
+      <tr>
+        <td>Network stability threat requiring urgent parameter change</td>
+        <td>OCP-observed network anomaly (<code>NET_PARTICIPATION</code> or <code>NET_CEREMONY_THROUGHPUT</code> below stress threshold for 30+ minutes) that cannot be addressed through operational means</td>
+        <td>Same requirement as above; network telemetry data included in threat justification document</td>
+        <td>Same as above</td>
+      </tr>
+    </table>
+    <div class="callout critical">
+      <strong>Emergency Classification Is Not Self-Certifying</strong>
+      OCP cannot invoke the emergency fast-track by asserting that a threat exists. The threat justification document must contain verifiable evidence: either a P1 incident record number from the M5 Security Hardening audit log, or network telemetry data from the OCP metric store with timestamps. Institutions receive the evidence simultaneously with the emergency proposal. An institution that believes the emergency classification is unjustified may submit a formal objection through the gateway. The objection does not block the emergency vote, but if the emergency vote passes and the post-emergency audit (Section 5.3) finds the classification was unjustified, the result is treated as a governance violation with consequences for OCP's operational authorization.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <h3>5.2 Emergency Governance Timeline and Reduced Quorum with Compensating Controls</h3>
+    <table>
+      <tr><th>Phase</th><th>Standard Duration</th><th>Emergency Duration</th><th>What Changes</th><th>What Does Not Change</th></tr>
+      <tr>
+        <td>Discussion period</td>
+        <td>72 hours</td>
+        <td>2 hours</td>
+        <td>Window compressed; clarification requests accepted but responses may not arrive before voting window opens</td>
+        <td>Institutions still receive the full proposal and threat justification document simultaneously</td>
+      </tr>
+      <tr>
+        <td>Voting period</td>
+        <td>48 hours</td>
+        <td>4 hours</td>
+        <td>Institutions must complete their internal M/C/R process within 4 hours of voting window open to participate</td>
+        <td>Vote envelope format and signing requirements are identical; Reviewer authorization inside custody is non-waivable</td>
+      </tr>
+      <tr>
+        <td>Quorum threshold</td>
+        <td>66% (protocol upgrade)</td>
+        <td>50% of active institutions</td>
+        <td>Reduced to acknowledge that not all institutions may reach their Reviewer in 4 hours</td>
+        <td>Participation condition still applies: at least 50% of active institutions must submit a valid vote; reduced quorum applies only to approval threshold among participants</td>
+      </tr>
+      <tr>
+        <td>Implementation authorization</td>
+        <td>72-hour window post-quorum</td>
+        <td>2-hour window post-quorum</td>
+        <td>Compressed; institutions that voted YES are expected to be prepared to sign the implementation ceremony</td>
+        <td>Implementation ceremony is a full root-gated signing ceremony; M/C/R required; Reviewer non-waivable</td>
+      </tr>
+    </table>
+    <p>The reduced quorum threshold is a compensating recognition that some institutions will not be able to convene their Reviewer in 4 hours, not a signal that their participation is unimportant. Institutions that cannot participate in the emergency vote are notified of the outcome through the institutional gateway and have 72 hours to submit a dissenting record to the governance audit log. A dissenting record does not reverse the outcome but is part of the permanent governance history.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>5.3 Maker/Checker/Reviewer Separation Under Emergency Conditions</h3>
+    <p>The M/C/R process inside the institution's custody environment does not change for emergency upgrades. What changes is the external timeline that the institution is working against. The internal process still requires: a Maker to prepare the vote envelope and (if the proposal passes) the implementation ceremony payload, a Checker to verify the payload against the proposal content hash, and a Reviewer to authorize the signing action. Collapsing any two of these roles is not permitted under emergency conditions.</p>
+    <p>Two institution-side mechanisms support emergency M/C/R execution within compressed timelines.</p>
+    <p>First, backup Reviewer designation is required during institution enrollment. Every institution must name at least one backup Reviewer whose contact information is held by OCP for emergency notification. When OCP broadcasts an emergency proposal, it simultaneously sends direct emergency notifications to both the primary and backup Reviewer for each institution through the institutional gateway. The primary Reviewer is not given a head start; both are notified at the same time to maximize the probability that at least one is reachable within the 4-hour window.</p>
+    <p>Second, pre-authorized ceremony envelope templates are available for the most common emergency upgrade types (binary security patch, critical parameter change). During institution enrollment, the institution's Reviewer signs a meta-authorization that designates specific proposal types as eligible for expedited M/C/R: the Maker prepares the envelope, the Checker verifies it, and the Reviewer verifies only that the proposal type matches the pre-authorized category and that the content hash is valid. This reduces the Reviewer's review burden for the specific scenario the meta-authorization covers without waiving the Reviewer's participation. The meta-authorization itself requires a full M/C/R ceremony during enrollment and can be revoked by a subsequent Reviewer authorization.</p>
+  </div>
+
+  <div class="subsection">
+    <h3>5.4 Post-Emergency Audit Requirements</h3>
+    <p>Every emergency governance action triggers a mandatory post-emergency audit within 72 hours of the emergency result being certified. The audit is not optional and cannot be waived by any party.</p>
+    <table>
+      <tr><th>Audit Component</th><th>Responsible Party</th><th>Deadline</th><th>Output</th><th>Consequence of Non-Completion</th></tr>
+      <tr>
+        <td>Emergency classification review</td>
+        <td>OCP; independent of the team that originated the emergency proposal</td>
+        <td>72 hours from result certification</td>
+        <td>Written determination: classification was justified or unjustified; evidence review; timeline reconstruction</td>
+        <td>Non-completion triggers automatic governance review of OCP's emergency classification authority</td>
+      </tr>
+      <tr>
+        <td>Retrospective ratification vote</td>
+        <td>All institutions; standard governance timeline</td>
+        <td>7 days from result certification</td>
+        <td>Standard governance vote (standard quorum, standard timeline) on whether to retain or reverse the emergency action</td>
+        <td>If retrospective ratification vote is not initiated within 7 days, the emergency action is automatically treated as provisional and may be reversed by a simple majority vote without waiting for a new proposal</td>
+      </tr>
+      <tr>
+        <td>Institution non-participation review</td>
+        <td>OCP; with input from non-participating institutions</td>
+        <td>72 hours from result certification</td>
+        <td>Record of which institutions did not participate and whether their non-participation was due to Reviewer unavailability, objection to emergency classification, or technical failure</td>
+        <td>Systemic Reviewer unavailability across multiple institutions triggers a governance proposal to review backup Reviewer designation requirements</td>
+      </tr>
+      <tr>
+        <td>Binary health validation</td>
+        <td>OCP automated; confirmed by each operator via admin channel</td>
+        <td>24 hours from implementation completion</td>
+        <td>Fleet attestation report confirming emergency binary is running correctly on all upgraded nodes; no new P1 or P2 incidents attributable to the binary</td>
+        <td>Any unresolved P1 or P2 incident at 24 hours triggers automatic escalation to retroactive rollback consideration</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h3>5.5 Abuse Prevention Mechanisms</h3>
+    <p>Four structural mechanisms prevent the emergency fast-track from being used as a routine governance shortcut.</p>
+    <p><strong>Frequency cap:</strong> No more than two emergency fast-track proposals may be active or completed within any rolling 90-day window. A third emergency proposal within 90 days requires unanimous institution approval to receive emergency classification. OCP cannot override this cap.</p>
+    <p><strong>Mandatory evidence publication:</strong> Emergency classification requires simultaneous publication of the threat justification document to all institutions. A classification that cannot be supported with publishable evidence cannot proceed under emergency rules. This prevents OCP from invoking emergency classification based on information it is unwilling to share with the cohort.</p>
+    <p><strong>Retrospective reversal right:</strong> Any emergency action that fails retrospective ratification (Section 5.4) is reversed by OCP within 48 hours of the ratification vote result. Reversal means applying the rollback binary (which was authorized as part of the original emergency proposal) and returning network parameters to pre-emergency values. The reversal itself is not a governance action; it is an automatic consequence of ratification failure, and OCP executes it without a new vote.</p>
+    <p><strong>Governance violation consequence:</strong> A finding that an emergency classification was unjustified (from the OCP internal audit in Section 5.4) is recorded as a governance violation in the OCP operational record. Three governance violations within 24 months trigger a mandatory governance proposal to review OCP's role in the Superstructure architecture. That review proposal follows the standard governance lifecycle and cannot itself be classified as emergency.</p>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- APPENDIX -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num" style="background: var(--gray);">A</div>
+    <h2>Appendix: Reference Constants and Cross-Spec Integration</h2>
+  </div>
+
+  <div class="subsection">
+    <h3>A.1 Governance and Upgrade Constants Summary</h3>
+    <table>
+      <tr><th>Constant</th><th>Value</th><th>Source</th></tr>
+      <tr><td>Standard discussion period</td><td>72 hours</td><td>M5 (this document)</td></tr>
+      <tr><td>Expedited discussion period</td><td>24 hours</td><td>M5 (this document)</td></tr>
+      <tr><td>Emergency discussion period</td><td>2 hours</td><td>M5 (this document)</td></tr>
+      <tr><td>Standard voting period</td><td>48 hours</td><td>M5 (this document)</td></tr>
+      <tr><td>Expedited voting period</td><td>24 hours</td><td>M5 (this document)</td></tr>
+      <tr><td>Emergency voting period</td><td>4 hours</td><td>M5 (this document)</td></tr>
+      <tr><td>Simple majority threshold</td><td>50% + 1 of active institutions</td><td>M5 (this document); consistent with M5 Cross-Operator Section 5.1</td></tr>
+      <tr><td>Supermajority threshold</td><td>66% of active institutions</td><td>M5 (this document); consistent with M5 Cross-Operator Section 5.1</td></tr>
+      <tr><td>Unanimous threshold</td><td>100% of active institutions</td><td>M5 (this document); consistent with M5 Cross-Operator Section 5.1</td></tr>
+      <tr><td>Emergency reduced threshold</td><td>50% of active institutions</td><td>M5 (this document)</td></tr>
+      <tr><td>Quorum participation condition</td><td>50% of active institutions must submit any valid vote</td><td>M5 (this document)</td></tr>
+      <tr><td>Proposal lapsed cooling period</td><td>14 days before resubmission</td><td>M5 (this document)</td></tr>
+      <tr><td>Implementation signature window (standard)</td><td>72 hours post-quorum</td><td>M5 (this document); consistent with M5 Cross-Operator Section 5.3</td></tr>
+      <tr><td>Implementation signature window (emergency)</td><td>2 hours post-quorum</td><td>M5 (this document)</td></tr>
+      <tr><td>Post-emergency audit deadline</td><td>72 hours from result certification</td><td>M5 (this document)</td></tr>
+      <tr><td>Retrospective ratification vote deadline</td><td>7 days from result certification</td><td>M5 (this document)</td></tr>
+      <tr><td>Emergency frequency cap</td><td>2 per rolling 90-day window; third requires unanimous approval</td><td>M5 (this document)</td></tr>
+      <tr><td>Governance violation consequence trigger</td><td>3 violations within 24 months</td><td>M5 (this document)</td></tr>
+      <tr><td>Rollback trigger: wave health degradation</td><td>2 or more operators in wave entering degraded/critical within 60 minutes post-upgrade</td><td>M5 (this document)</td></tr>
+      <tr><td>Rollback trigger: coordinated self-rollback</td><td>3 operators within 60 minutes</td><td>M5 (this document); consistent with M5 Cross-Operator Section 3.3</td></tr>
+      <tr><td>Rollback trigger: ceremony success rate collapse</td><td>Below 90% within 30 minutes of wave completion</td><td>M5 (this document)</td></tr>
+      <tr><td>State checkpoint prerequisite gate</td>
+      <td>Required before upgrade binary push; failure excludes node from current wave</td><td>M5 (this document)</td></tr>
+      <tr><td>Post-rollback verification window</td><td>5 minutes per node; 30 minutes extended if ceremony rate does not normalize</td><td>M5 (this document)</td></tr>
+      <tr><td>Nonce retention period</td><td>30 days minimum</td><td>M3 (unchanged)</td></tr>
+      <tr><td>Envelope freshness window</td><td>120 seconds</td><td>M3 (unchanged)</td></tr>
+      <tr><td>Maker/Checker/Reviewer: Reviewer waivable</td><td>No: non-waivable for all governance and implementation ceremonies including emergency</td><td>M2/M3 (unchanged)</td></tr>
+      <tr><td>Signing key location</td><td>Institution custody only (Layer 1); never enters Middleware Layer (Layer 3)</td><td>M2 (unchanged)</td></tr>
+    </table>
+  </div>
+
+  <div class="appendix-grid">
+    <div class="appendix-card">
+      <h4>M5 Cross-Operator Integration</h4>
+      <p>Governance signal propagation in M5 Cross-Operator Section 5 is the foundation this document extends. Quorum thresholds, vote direction privacy, and middleware authority constraints here are fully consistent with that section. The three OCP channels (Admin, Broadcast, Telemetry) defined in M5 Cross-Operator Section 1 are the transport layer for all governance messages in this spec.</p>
+    </div>
+    <div class="appendix-card">
+      <h4>M5 Security Hardening Integration</h4>
+      <p>Emergency classification requires a P1 incident record from the M5 Security Hardening audit log as one valid evidence type. Rollback state checkpoints upload to the OCP forensic store per M5 SH chain-of-custody procedures. Post-rollback binary verification uses the secure boot attestation pipeline from M5 SH Section 1.4.</p>
+    </div>
+    <div class="appendix-card">
+      <h4>M5 Telemetry Framework Integration</h4>
+      <p>Version discovery uses NODE_INTEGRITY binary hash data from M5 Telemetry. Rollback triggers use health tier data (degraded, critical) and NET_CEREMONY_THROUGHPUT from M5 Telemetry. Active institution quorum denominator uses validator health tier state from M5 Telemetry to determine which institutions are eligible to vote.</p>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>Post Fiat Superstructure Validator Platform: M5 Validator Governance and Protocol Upgrade Orchestration Architecture, v1.0, March 2026</span>
+  <span>Classification: Governance Architecture Specification</span>
+</div>
+
+</body>
+</html>
